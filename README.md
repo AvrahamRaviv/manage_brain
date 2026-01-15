@@ -7,31 +7,17 @@ what changed since the last check.
 The script parses this list. Keep the keys as shown.
 
 <!-- PROJECT_LIST_START -->
-- name: Polymarket Expectation
-  repo: https://github.com/AvrahamRaviv/polymarket-expectation
 <!-- PROJECT_LIST_END -->
 
 ## Project Status Table (auto-generated)
 <!-- PROJECT_TABLE_START -->
-| Project | Status | Todo | Last Update | Status Doc |
-| --- | --- | --- | --- | --- |
-| [Polymarket Expectation](https://github.com/AvrahamRaviv/polymarket-expectation) | wip | - | 2026-01-15 | [status](project_status/polymarket-expectation.md) |
+| Project | Status | Todo | Todo Link | Last Update | Status Doc |
+| --- | --- | --- | --- | --- | --- |
 <!-- PROJECT_TABLE_END -->
 
 ## Latest Changes (auto-generated)
 <!-- LATEST_CHANGES_START -->
-- Polymarket Expectation: Update README with comprehensive documentation
-
-- Quick start all-in-one command
-- Workflow diagram (train → find → evaluate)
-- Nested CV with holdout documentation
-- Find opportunities command
-- Evaluate opportunities command
-- Example results output
-- Conservative and full grid search examples
-- Updated project structure
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> (3aa9aae, 2026-01-15)
+- No changes since last run.
 <!-- LATEST_CHANGES_END -->
 
 ## Usage
@@ -45,9 +31,13 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> (3aa9aae, 2026-01-15)
 3. Run the updater:
    - `python scripts/update_ideas.py`
 4. Add a new project without editing the README:
-   - `python scripts/update_ideas.py --add "My Project|https://github.com/me/my-project|first steps"`
+   - `python scripts/update_ideas.py --add "My Project|https://github.com/me/my-project|first steps|https://example.com/todo"`
 5. Push updates automatically:
    - `python scripts/update_ideas.py --push`
+6. Run only one project (by name or repo):
+   - `python scripts/update_ideas.py --only "My Project"`
+7. Delete a project (by name or repo):
+   - `python scripts/update_ideas.py --delete "My Project"`
 
 ## Collaborator Setup (for your brother)
 1. Clone the repo and create a virtualenv:
@@ -63,7 +53,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> (3aa9aae, 2026-01-15)
    - `export GITHUB_TOKEN=...`
    - `export GITLAB_TOKEN=...`
 4. Add his projects and run:
-   - `python scripts/update_ideas.py --add "Project Name|https://github.com/owner/repo|todo"`
+   - `python scripts/update_ideas.py --add "Project Name|https://github.com/owner/repo|todo|https://example.com/todo"`
 5. If he wants auto-push too:
    - ensure he is a collaborator with write access
    - `python scripts/update_ideas.py --push`
