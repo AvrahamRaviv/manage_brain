@@ -7,17 +7,31 @@ what changed since the last check.
 The script parses this list. Keep the keys as shown.
 
 <!-- PROJECT_LIST_START -->
+- name: Polymarket Expectation
+  repo: https://github.com/AvrahamRaviv/polymarket-expectation
 <!-- PROJECT_LIST_END -->
 
 ## Project Status Table (auto-generated)
 <!-- PROJECT_TABLE_START -->
 | Project | Status | Todo | Todo Link | Last Update | Status Doc |
 | --- | --- | --- | --- | --- | --- |
+| [Polymarket Expectation](https://github.com/AvrahamRaviv/polymarket-expectation) | wip | - | - | 2026-01-15 14:14 | [status](project_status/polymarket-expectation.md) |
 <!-- PROJECT_TABLE_END -->
 
 ## Latest Changes (auto-generated)
 <!-- LATEST_CHANGES_START -->
-- No changes since last run.
+- Polymarket Expectation: Update README with comprehensive documentation
+
+- Quick start all-in-one command
+- Workflow diagram (train → find → evaluate)
+- Nested CV with holdout documentation
+- Find opportunities command
+- Evaluate opportunities command
+- Example results output
+- Conservative and full grid search examples
+- Updated project structure
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> (3aa9aae, 2026-01-15 14:14)
 <!-- LATEST_CHANGES_END -->
 
 ## Usage
