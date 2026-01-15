@@ -20,18 +20,7 @@ The script parses this list. Keep the keys as shown.
 
 ## Latest Changes (auto-generated)
 <!-- LATEST_CHANGES_START -->
-- Polymarket Expectation: Update README with comprehensive documentation
-
-- Quick start all-in-one command
-- Workflow diagram (train → find → evaluate)
-- Nested CV with holdout documentation
-- Find opportunities command
-- Evaluate opportunities command
-- Example results output
-- Conservative and full grid search examples
-- Updated project structure
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com> (3aa9aae, 2026-01-15)
+- No changes since last run.
 <!-- LATEST_CHANGES_END -->
 
 ## Usage
