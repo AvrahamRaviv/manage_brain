@@ -221,7 +221,7 @@ def fetch_github_project(repo_url: str, owner: str, repo: str, token: str | None
 
     commits_resp = requests.get(
         f"{api_base}/repos/{owner}/{repo}/commits",
-        params={"sha": default_branch, "per_page": 1},
+        params={"sha": default_branch, "per_page": 20},
         headers=github_headers(token),
         timeout=20,
     )
@@ -238,6 +238,16 @@ def fetch_github_project(repo_url: str, owner: str, repo: str, token: str | None
     latest_date = iso_to_datetime(
         (commit_info.get("committer") or {}).get("date")
     )
+    recent_commits = []
+    for commit in commits:
+        info = commit.get("commit", {})
+        recent_commits.append(
+            {
+                "sha": commit.get("sha"),
+                "message": info.get("message"),
+                "date": iso_to_datetime((info.get("committer") or {}).get("date")),
+            }
+        )
 
     release_resp = requests.get(
         f"{api_base}/repos/{owner}/{repo}/releases/latest",
@@ -253,6 +263,7 @@ def fetch_github_project(repo_url: str, owner: str, repo: str, token: str | None
         "latest_sha": latest_sha,
         "latest_message": latest_message,
         "latest_date": latest_date,
+        "recent_commits": recent_commits,
         "has_release": has_release,
     }
 
@@ -275,7 +286,7 @@ def fetch_gitlab_project(repo_url: str, path: str, token: str | None) -> dict:
 
     commits_resp = requests.get(
         f"{api_base}/projects/{project_id}/repository/commits",
-        params={"ref_name": default_branch, "per_page": 1},
+        params={"ref_name": default_branch, "per_page": 20},
         headers=gitlab_headers(token),
         timeout=20,
     )
@@ -285,6 +296,15 @@ def fetch_gitlab_project(repo_url: str, path: str, token: str | None) -> dict:
     latest_sha = latest_commit.get("id") if latest_commit else None
     latest_message = latest_commit.get("title") if latest_commit else None
     latest_date = iso_to_datetime(latest_commit.get("committed_date") if latest_commit else None)
+    recent_commits = []
+    for commit in commits:
+        recent_commits.append(
+            {
+                "sha": commit.get("id"),
+                "message": commit.get("title"),
+                "date": iso_to_datetime(commit.get("committed_date")),
+            }
+        )
 
     releases_resp = requests.get(
         f"{api_base}/projects/{project_id}/releases",
@@ -301,6 +321,7 @@ def fetch_gitlab_project(repo_url: str, path: str, token: str | None) -> dict:
         "latest_sha": latest_sha,
         "latest_message": latest_message,
         "latest_date": latest_date,
+        "recent_commits": recent_commits,
         "has_release": has_release,
     }
 
@@ -346,6 +367,7 @@ def update_project_status_file(
     last_update: str,
     latest_lines: list[str],
     status_dir: str,
+    is_first_seen: bool,
 ) -> str:
     os.makedirs(status_dir, exist_ok=True)
     slug = slugify(project["name"])
@@ -364,6 +386,16 @@ def update_project_status_file(
             history_lines = (
                 [f"- {date_label}"] + [f"  {line}" for line in old_latest] + history_lines
             )
+    elif is_first_seen:
+        recent = info.get("recent_commits", [])
+        if recent:
+            history_lines = [line for line in history_lines if line.strip() and line.strip() != "- No history yet."]
+            history_lines.append(f"- {date_label}")
+            for commit in recent:
+                message = commit.get("message") or "Commit"
+                sha = (commit.get("sha") or "")[:7]
+                commit_date = datetime_to_iso(commit.get("date"))
+                history_lines.append(f"  - {message} ({sha}, {commit_date})")
 
     content_lines = [
         f"# {project['name']}",
@@ -467,6 +499,7 @@ def main() -> int:
             last_update,
             latest_lines,
             args.status_dir,
+            is_first_seen=key not in state_projects,
         )
 
         state_projects[key] = {
