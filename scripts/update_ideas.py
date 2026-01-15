@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import os
 import re
+import subprocess
 import sys
 from urllib.parse import quote, urlparse
 
@@ -16,6 +17,11 @@ PROJECT_TABLE_START = "<!-- PROJECT_TABLE_START -->"
 PROJECT_TABLE_END = "<!-- PROJECT_TABLE_END -->"
 LATEST_CHANGES_START = "<!-- LATEST_CHANGES_START -->"
 LATEST_CHANGES_END = "<!-- LATEST_CHANGES_END -->"
+
+PROJECT_LATEST_START = "<!-- PROJECT_LATEST_START -->"
+PROJECT_LATEST_END = "<!-- PROJECT_LATEST_END -->"
+PROJECT_HISTORY_START = "<!-- PROJECT_HISTORY_START -->"
+PROJECT_HISTORY_END = "<!-- PROJECT_HISTORY_END -->"
 
 STATUS_NOT_STARTED = "not_started"
 STATUS_WIP = "wip"
@@ -105,6 +111,16 @@ def replace_section(text: str, start_marker: str, end_marker: str, new_lines: li
     return "\n".join(updated) + "\n"
 
 
+def read_section(text: str, start_marker: str, end_marker: str) -> list[str]:
+    lines = text.splitlines()
+    try:
+        start_idx = lines.index(start_marker) + 1
+        end_idx = lines.index(end_marker)
+    except ValueError:
+        return []
+    return lines[start_idx:end_idx]
+
+
 def format_project_list(projects: list[dict]) -> list[str]:
     lines = []
     for project in projects:
@@ -128,6 +144,12 @@ def parse_add_item(raw: str) -> dict:
     else:
         project["todo"] = ""
     return project
+
+
+def slugify(name: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", name.strip().lower())
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    return slug or "project"
 
 
 def parse_repo_url(repo_url: str) -> dict:
@@ -295,18 +317,78 @@ def fetch_project(project: dict, github_token: str | None, gitlab_token: str | N
 
 def format_table(project_rows: list) -> list:
     lines = [
-        "| Project | Status | Todo | Last Update |",
-        "| --- | --- | --- | --- |",
+        "| Project | Status | Todo | Last Update | Status Doc |",
+        "| --- | --- | --- | --- | --- |",
     ]
     lines.extend(project_rows)
     return lines
 
 
-def format_project_row(project: dict, status: str, last_update: str) -> str:
+def format_project_row(
+    project: dict,
+    status: str,
+    last_update: str,
+    status_doc_path: str,
+) -> str:
     name = project["name"].strip()
     repo_url = project["repo"].strip()
     todo = project.get("todo", "").strip() or "-"
-    return f"| [{name}]({repo_url}) | {status} | {todo} | {last_update} |"
+    return (
+        f"| [{name}]({repo_url}) | {status} | {todo} | {last_update} |"
+        f" [status]({status_doc_path}) |"
+    )
+
+
+def update_project_status_file(
+    project: dict,
+    info: dict,
+    status: str,
+    last_update: str,
+    latest_lines: list[str],
+    status_dir: str,
+) -> str:
+    os.makedirs(status_dir, exist_ok=True)
+    slug = slugify(project["name"])
+    path = os.path.join(status_dir, f"{slug}.md")
+    date_label = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+
+    latest_lines = latest_lines or ["- No changes since last run."]
+    history_lines = ["- No history yet."]
+
+    if os.path.exists(path):
+        existing = read_text(path)
+        old_latest = read_section(existing, PROJECT_LATEST_START, PROJECT_LATEST_END)
+        history_lines = read_section(existing, PROJECT_HISTORY_START, PROJECT_HISTORY_END) or history_lines
+        if old_latest and old_latest != ["- No changes since last run."]:
+            history_lines = [line for line in history_lines if line.strip() and line.strip() != "- No history yet."]
+            history_lines = (
+                [f"- {date_label}"] + [f"  {line}" for line in old_latest] + history_lines
+            )
+
+    content_lines = [
+        f"# {project['name']}",
+        "",
+        f"Repo: {project['repo']}",
+        "",
+        "## Current Status",
+        f"- Status: {status}",
+        f"- Last update: {last_update}",
+        f"- Default branch: {info.get('default_branch', '-')}",
+        f"- Archived: {info.get('archived', False)}",
+        "",
+        "## Latest Changes (auto-generated)",
+        PROJECT_LATEST_START,
+        *latest_lines,
+        PROJECT_LATEST_END,
+        "",
+        "## History (auto-generated)",
+        PROJECT_HISTORY_START,
+        *history_lines,
+        PROJECT_HISTORY_END,
+        "",
+    ]
+    write_text(path, "\n".join(content_lines))
+    return path
 
 
 def main() -> int:
@@ -314,10 +396,20 @@ def main() -> int:
     parser.add_argument("--readme", default="README.md", help="Path to README.md")
     parser.add_argument("--state", default="data/state.json", help="Path to state.json")
     parser.add_argument(
+        "--status-dir",
+        default="project_status",
+        help="Directory for per-project status markdown files.",
+    )
+    parser.add_argument(
         "--add",
         action="append",
         default=[],
         help='Add a project: "Name|https://host/owner/repo|optional todo"',
+    )
+    parser.add_argument(
+        "--push",
+        action="store_true",
+        help="Commit and push README changes after updating.",
     )
     args = parser.parse_args()
 
@@ -353,15 +445,29 @@ def main() -> int:
         info = fetch_project(project, github_token, gitlab_token)
         status = compute_status(info["has_release"], info["archived"], info["latest_date"])
         last_update = datetime_to_iso(info["latest_date"])
+        status_doc_path = f"{args.status_dir}/{slugify(project['name'])}.md"
 
-        table_rows.append(format_project_row(project, status, last_update))
+        table_rows.append(format_project_row(project, status, last_update, status_doc_path))
 
         key = project["repo"]
         prev = state_projects.get(key, {})
+        latest_lines = []
         if info["latest_sha"] and info["latest_sha"] != prev.get("latest_sha"):
             short_sha = info["latest_sha"][:7]
             message = info.get("latest_message") or "New commit"
+            latest_lines.append(f"- {message} ({short_sha}, {last_update})")
             change_lines.append(f"- {project['name']}: {message} ({short_sha}, {last_update})")
+        else:
+            latest_lines.append("- No changes since last run.")
+
+        update_project_status_file(
+            project,
+            info,
+            status,
+            last_update,
+            latest_lines,
+            args.status_dir,
+        )
 
         state_projects[key] = {
             "name": project["name"],
@@ -378,6 +484,14 @@ def main() -> int:
     updated = replace_section(updated, LATEST_CHANGES_START, LATEST_CHANGES_END, change_lines)
     write_text(args.readme, updated)
     save_state(args.state, state)
+
+    if args.push:
+        subprocess.run(["git", "add", args.readme, args.status_dir], check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Update idea tracker README"],
+            check=False,
+        )
+        subprocess.run(["git", "push"], check=True)
 
     return 0
 

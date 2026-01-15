@@ -1,3 +1,11 @@
 {
-  "projects": {}
+  "projects": {
+    "https://github.com/AvrahamRaviv/polymarket-expectation": {
+      "latest_date": "2026-01-15T14:14:11+00:00",
+      "latest_sha": "3aa9aae53ae249de0cde3f3bcd80803fd39015df",
+      "name": "Polymarket Expectation",
+      "repo": "https://github.com/AvrahamRaviv/polymarket-expectation",
+      "status": "wip"
+    }
+  }
 }

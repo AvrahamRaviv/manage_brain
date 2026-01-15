@@ -13,9 +13,9 @@ The script parses this list. Keep the keys as shown.
 
 ## Project Status Table (auto-generated)
 <!-- PROJECT_TABLE_START -->
-| Project | Status | Todo | Last Update |
-| --- | --- | --- | --- |
-| [Polymarket Expectation](https://github.com/AvrahamRaviv/polymarket-expectation) | wip | - | 2026-01-15 |
+| Project | Status | Todo | Last Update | Status Doc |
+| --- | --- | --- | --- | --- |
+| [Polymarket Expectation](https://github.com/AvrahamRaviv/polymarket-expectation) | wip | - | 2026-01-15 | [status](project_status/polymarket-expectation.md) |
 <!-- PROJECT_TABLE_END -->
 
 ## Latest Changes (auto-generated)
