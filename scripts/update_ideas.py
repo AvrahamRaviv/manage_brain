@@ -105,6 +105,31 @@ def replace_section(text: str, start_marker: str, end_marker: str, new_lines: li
     return "\n".join(updated) + "\n"
 
 
+def format_project_list(projects: list[dict]) -> list[str]:
+    lines = []
+    for project in projects:
+        lines.append(f"- name: {project['name']}")
+        lines.append(f"  repo: {project['repo']}")
+        todo = project.get("todo", "")
+        if todo:
+            lines.append(f"  todo: {todo}")
+    return lines
+
+
+def parse_add_item(raw: str) -> dict:
+    parts = [part.strip() for part in raw.split("|")]
+    if len(parts) < 2:
+        raise ValueError(
+            "Invalid --add value. Use \"Name|https://host/owner/repo|optional todo\""
+        )
+    project = {"name": parts[0], "repo": parts[1]}
+    if len(parts) > 2 and parts[2]:
+        project["todo"] = parts[2]
+    else:
+        project["todo"] = ""
+    return project
+
+
 def parse_repo_url(repo_url: str) -> dict:
     parsed = urlparse(repo_url)
     host = parsed.netloc.lower()
@@ -288,10 +313,33 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Update Manage Brain README.")
     parser.add_argument("--readme", default="README.md", help="Path to README.md")
     parser.add_argument("--state", default="data/state.json", help="Path to state.json")
+    parser.add_argument(
+        "--add",
+        action="append",
+        default=[],
+        help='Add a project: "Name|https://host/owner/repo|optional todo"',
+    )
     args = parser.parse_args()
 
     readme_text = read_text(args.readme)
     projects = parse_project_list(readme_text)
+    if args.add:
+        existing_by_repo = {project["repo"]: project for project in projects}
+        for raw_item in args.add:
+            new_project = parse_add_item(raw_item)
+            existing = existing_by_repo.get(new_project["repo"])
+            if existing:
+                existing["name"] = new_project["name"]
+                existing["todo"] = new_project.get("todo", "")
+            else:
+                projects.append(new_project)
+                existing_by_repo[new_project["repo"]] = new_project
+        readme_text = replace_section(
+            readme_text,
+            PROJECT_LIST_START,
+            PROJECT_LIST_END,
+            format_project_list(projects),
+        )
     state = load_state(args.state)
     state_projects = state.setdefault("projects", {})
 

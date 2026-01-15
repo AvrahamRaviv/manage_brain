@@ -34,3 +34,5 @@ The script parses this list. Keep the keys as shown.
    - `export GITLAB_TOKEN=...`
 3. Run the updater:
    - `python scripts/update_ideas.py`
+4. Add a new project without editing the README:
+   - `python scripts/update_ideas.py --add "My Project|https://github.com/me/my-project|first steps"`
